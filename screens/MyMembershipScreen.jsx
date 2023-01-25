@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Platform,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { COLORS } from "../variables/color";
 import AppSeparator from "../components/AppSeparator";
@@ -16,12 +17,14 @@ import { __ } from "../language/stringPicker";
 import { routes } from "../navigation/routes";
 import { AntDesign } from "@expo/vector-icons";
 import api, { removeAuthToken, setAuthToken } from "../api/client";
+import { useIsFocused } from "@react-navigation/native";
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get("screen");
 const MyMembershipScreen = ({ navigation }) => {
   const [{ appSettings, auth_token, config, rtl_support }] = useStateValue();
-
   const [loading, setLoading] = useState(true);
   const [tempUser, setTempUser] = useState();
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     getMyMembershipStatus();
@@ -42,10 +45,12 @@ const MyMembershipScreen = ({ navigation }) => {
     api
       .get("my")
       .then((res) => {
-        if (res.ok) {
-          setTempUser(res?.data);
-        } else {
-          // TODO handle error
+        if (isFocused) {
+          if (res.ok) {
+            setTempUser(res?.data);
+          } else {
+            // TODO handle error
+          }
         }
       })
       .then(() => {
@@ -70,7 +75,9 @@ const MyMembershipScreen = ({ navigation }) => {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ width: "100%" }}>
-          <View style={styles.mainWrap}>
+          <View
+            style={tempUser?.membership ? styles.mainWrap_2 : styles.mainWrap}
+          >
             {tempUser?.membership ? (
               <View style={styles.membershipDetailWrap}>
                 <View
@@ -88,20 +95,24 @@ const MyMembershipScreen = ({ navigation }) => {
                     <View style={styles.emailWrap}>
                       <Text style={styles.emailLabel}>
                         {tempUser.email}
-                        {__(
-                          "myMembershipScreenTexts.emailLabel",
-                          appSettings.lng
-                        )}{" "}
+                        <Text style={{ fontWeight: "bold" }}>
+                          {__(
+                            "myMembershipScreenTexts.emailLabel",
+                            appSettings.lng
+                          )}{" "}
+                        </Text>
                       </Text>
                     </View>
                   ) : (
                     <View style={styles.emailWrap}>
-                      <Text style={styles.emailLabel}>
+                      <Text style={[styles.emailLabel, { fontWeight: "bold" }]}>
                         {__(
                           "myMembershipScreenTexts.emailLabel",
                           appSettings.lng
                         )}{" "}
-                        {tempUser.email}
+                        <Text style={{ fontWeight: "normal" }}>
+                          {tempUser.email}
+                        </Text>
                       </Text>
                     </View>
                   )}
@@ -114,12 +125,22 @@ const MyMembershipScreen = ({ navigation }) => {
                       { alignItems: rtl_support ? "flex-end" : "flex-start" },
                     ]}
                   >
-                    <Text style={[styles.reportHeader, rtlText]}>
-                      {__(
-                        "myMembershipScreenTexts.membershipDetailHeader",
-                        appSettings.lng
-                      )}
-                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: COLORS.bg_primary,
+                        paddingVertical: 5,
+                        paddingHorizontal: 10,
+                        borderRadius: 3,
+                        marginVertical: 5,
+                      }}
+                    >
+                      <Text style={[styles.reportHeader, rtlText]}>
+                        {__(
+                          "myMembershipScreenTexts.membershipDetailHeader",
+                          appSettings.lng
+                        )}
+                      </Text>
+                    </View>
                   </View>
 
                   <View style={[styles.reportRow, rtlView]}>
@@ -137,7 +158,7 @@ const MyMembershipScreen = ({ navigation }) => {
                       </Text>
                     </View>
                     <View style={styles.reportRight}>
-                      <Text style={styles.reportValue}>
+                      <Text style={[styles.reportValue, rtlTextA]}>
                         {__(
                           tempUser?.membership?.is_expired
                             ? "myMembershipScreenTexts.expired"
@@ -162,7 +183,7 @@ const MyMembershipScreen = ({ navigation }) => {
                       </Text>
                     </View>
                     <View style={styles.reportRight}>
-                      <Text style={styles.reportValue}>
+                      <Text style={[styles.reportValue, rtlTextA]}>
                         {__(
                           tempUser?.membership?.is_expired
                             ? "myMembershipScreenTexts.expiredOn"
@@ -188,7 +209,7 @@ const MyMembershipScreen = ({ navigation }) => {
                       </Text>
                     </View>
                     <View style={styles.reportRight}>
-                      <Text style={styles.reportValue}>
+                      <Text style={[styles.reportValue, rtlTextA]}>
                         {tempUser?.membership?.remaining_ads}
                       </Text>
                     </View>
@@ -214,7 +235,7 @@ const MyMembershipScreen = ({ navigation }) => {
                       </Text>
                     </View>
                     <View style={styles.reportRight}>
-                      <Text style={styles.reportValue}>
+                      <Text style={[styles.reportValue, rtlTextA]}>
                         {tempUser?.membership?.posted_ads}
                       </Text>
                     </View>
@@ -307,7 +328,7 @@ const MyMembershipScreen = ({ navigation }) => {
                                   style={styles.promotionLabel}
                                   numberOfLines={1}
                                 >
-                                  {config?.promotions[promo] || promo}
+                                  {__(`promotions.${promo}`, appSettings.lng)}
                                 </Text>
                               </View>
                               <View
@@ -348,41 +369,19 @@ const MyMembershipScreen = ({ navigation }) => {
               </View>
             ) : (
               <View style={styles.noMembershipWrap}>
-                <View style={[styles.titleWrap, rtlView]}>
-                  <View
-                    style={{
-                      height: 25,
-                      width: 25,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                      backgroundColor: COLORS.bg_dark,
-                    }}
-                  >
-                    <Image
-                      height={25}
-                      maxWidth="100%"
-                      resizeMode="contain"
-                      // eslint-disable-next-line no-undef
-                      source={require("../assets/membership_icon.png")}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.title,
-                      {
-                        paddingLeft: rtl_support ? 0 : 10,
-                        paddingRight: rtl_support ? 10 : 0,
-                      },
-                      rtlText,
-                    ]}
-                  >
+                <View style={styles.bgImgWrap}>
+                  <Image
+                    source={require("../assets/membership_bg.png")}
+                    style={styles.bgImg}
+                  />
+                </View>
+                <View style={styles.titleWrap}>
+                  <Text style={[styles.title, rtlText]}>
                     {__("myMembershipScreenTexts.title", appSettings.lng)}
                   </Text>
                 </View>
-                <AppSeparator style={styles.separator} />
                 <View style={styles.membershipTextWrap}>
-                  <Text style={[styles.membershipText, rtlTextA]}>
+                  <Text style={[styles.membershipText, rtlText]}>
                     {__(
                       "myMembershipScreenTexts.membershipText",
                       appSettings.lng
@@ -424,6 +423,16 @@ const MyMembershipScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgImg: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
+  },
+  bgImgWrap: {
+    width: screenWidth * 0.5,
+    height: screenWidth * 0.5 * 0.85,
+    marginBottom: screenHeight * 0.03,
+  },
   button: {
     width: "100%",
     paddingVertical: 6,
@@ -435,10 +444,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   buttonWrap: {
-    marginHorizontal: "4%",
+    marginHorizontal: "8%",
   },
   container: {
-    backgroundColor: COLORS.bg_dark,
+    backgroundColor: "#F8F8F8",
     flex: 1,
   },
   email: {
@@ -447,7 +456,6 @@ const styles = StyleSheet.create({
     color: COLORS.text_dark,
   },
   emailLabel: {
-    fontWeight: "bold",
     color: COLORS.text_gray,
   },
   iconWrap: {
@@ -460,6 +468,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   mainWrap: {
+    paddingHorizontal: "4%",
+    paddingTop: screenHeight * 0.1,
+  },
+  mainWrap_2: {
     paddingHorizontal: "4%",
     paddingVertical: "4%",
     backgroundColor: COLORS.white,
@@ -482,6 +494,11 @@ const styles = StyleSheet.create({
     color: COLORS.text_gray,
     marginBottom: 5,
     lineHeight: 22,
+    textAlign: "center",
+  },
+  membershipTextWrap: {
+    alignItems: "center",
+    paddingVertical: 10,
   },
   name: {
     fontWeight: "bold",
@@ -490,6 +507,9 @@ const styles = StyleSheet.create({
   },
   nameWrap: {
     marginBottom: 5,
+  },
+  noMembershipWrap: {
+    alignItems: "center",
   },
   promotionContent: {
     flex: 1,
@@ -503,6 +523,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 5,
+    backgroundColor: COLORS.bg_dark,
   },
   promotionHeaderRow: {
     flexDirection: "row",
@@ -512,7 +533,7 @@ const styles = StyleSheet.create({
   },
   promotionHeaderText: {
     fontWeight: "bold",
-    color: COLORS.text_gray,
+    color: COLORS.text_dark,
   },
   promotionLabel: {
     fontWeight: "bold",
@@ -539,14 +560,14 @@ const styles = StyleSheet.create({
   },
   reportHeader: {
     fontWeight: "bold",
-    color: COLORS.text_gray,
+    color: COLORS.primary,
   },
   reportLabel: {
     fontWeight: "bold",
-    color: COLORS.text_gray,
+    color: COLORS.text_dark,
   },
   reportLeft: {
-    flex: Platform.OS === "ios" ? 1.5 : 1,
+    flex: Platform.OS === "ios" ? 1.5 : 1.2,
   },
   reportRight: { flex: 2 },
   reportRow: {
@@ -556,8 +577,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border_light,
   },
   reportValue: {
-    fontWeight: "bold",
-    color: COLORS.text_darky,
+    color: COLORS.text_gray,
   },
   separator: {
     width: "100%",
@@ -570,7 +590,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: Platform.OS === "ios" ? 13 : 10,
   },
   showMoreButtonText: {
     fontSize: 16,
@@ -578,12 +598,14 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     color: COLORS.text_dark,
+    paddingHorizontal: 10,
+    fontWeight: "bold",
   },
   titleWrap: {
-    flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 10,
   },
 });
 

@@ -6,16 +6,23 @@ import { COLORS } from "../variables/color";
 import settingsStorage from "../app/settings/settingsStorage";
 import { __ } from "../language/stringPicker";
 import authStorage from "../app/auth/authStorage";
-import api, { removeAuthToken, setAuthToken, setLocale } from "../api/client";
+import api, {
+  removeAuthToken,
+  setAuthToken,
+  setCurrencyLocale,
+  setLocale,
+} from "../api/client";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import * as Localization from "expo-localization";
+import * as SplashScreen from "expo-splash-screen";
 
 import ListingDetailScreen from "../screens/ListingDetailScreen";
 import ChatScreen from "../screens/ChatScreen";
 import LoginScreen from "../screens/LoginScreen";
 import SignUpScreen from "../screens/SignUpScreen";
 import SettingsScreen from "../screens/SettingsScreen";
-import TabNavigator from "./TabNavigator";
+import DrawerNavigator from "./DrawerNavigator";
 import MyListingsScreen from "../screens/MyListingsScreen";
 import FavouriteScreen from "../screens/FavoritesScreen";
 import ReportScreen from "../screens/ReportScreen";
@@ -29,14 +36,12 @@ import EditPersonalDetailScreen from "../screens/EditPersonalDetailScreen";
 import AboutAppScreen from "../screens/AboutAppScreen";
 import TnCScreen from "../screens/TnCScreen";
 import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
-import ThirdPartyLicensesScreen from "../screens/ThirdPartyLicensesScreen";
 
 import EditListingScreen from "../screens/EditListingScreen";
 import SelectLocationScreen from "../screens/SelectLocationScreen";
 import SendEmailScreen from "../screens/SendEmailScreen";
 import SelectCategoryScreen from "../screens/SelectCategoryScreen";
 import StoreDetailsScreen from "../screens/StoreDetailsScreen";
-import StoreMoreDetailsScreen from "../screens/StoreMoreDetailsScreen";
 import AllStores from "../screens/AllStores";
 import MyStoreScreen from "../screens/MyStoreScreen";
 import { routes } from "./routes";
@@ -48,16 +53,22 @@ import PaymentDetailScreen from "../screens/PaymentDetailScreen";
 
 import { defaultLng } from "../language/stringPicker";
 
-const Stack = createStackNavigator();
-
 import rtlSupportedLng from "../language/rtlSupoortedLng.json";
 import ChatScreenSingle from "../screens/ChatScreenSingle";
+import ForgotPassScreen from "../screens/ForgotPassScreen";
+import OTPVerificationScreen from "../screens/OTPVerificationScreen";
+import MyDocumentsScreen from "../screens/MyDocumentsScreen";
+const Stack = createStackNavigator();
+
 const HomeNavigator = () => {
   const [{ user, auth_token, appSettings, config }, dispatch] = useStateValue();
   const [userSet, setUserSet] = useState(false);
   const [settingsUpdated, setSettingsUpdated] = useState(false);
   const [configUpdated, setConfigUpdated] = useState(false);
   const [notiConfig, setNotiConfig] = useState([]);
+  const [deviceLocale, setDeviceLocale] = useState(
+    Localization.locale.slice(0, 2)
+  );
 
   const restoreUser = async () => {
     const storedUser = await authStorage.getUser();
@@ -95,14 +106,16 @@ const HomeNavigator = () => {
   const restoreSettings = async () => {
     const storedSettings = await settingsStorage.getAppSettings();
     if (!storedSettings) {
-      if (rtlSupportedLng.includes(defaultLng)) {
+      if (
+        rtlSupportedLng.includes(defaultLng) &&
+        !rtlSupportedLng.includes(deviceLocale)
+      ) {
         dispatch({
           type: "SET_RTL_SUPPORT",
           rtl_support: true,
         });
       }
       setLocale(defaultLng);
-
       setSettingsUpdated(true);
       return;
     }
@@ -111,13 +124,20 @@ const HomeNavigator = () => {
       if (parsedSettings?.notifications) {
         setNotiConfig(parsedSettings.notifications);
       }
-      if (parsedSettings?.lng && rtlSupportedLng.includes(parsedSettings.lng)) {
+      if (
+        parsedSettings?.lng &&
+        rtlSupportedLng.includes(parsedSettings.lng) &&
+        !rtlSupportedLng.includes(deviceLocale)
+      ) {
         dispatch({
           type: "SET_RTL_SUPPORT",
           rtl_support: true,
         });
       }
       setLocale(parsedSettings?.lng || defaultLng);
+      if (parsedSettings?.dynamic_currency) {
+        setCurrencyLocale(parsedSettings.dynamic_currency);
+      }
       dispatch({
         type: "SET_SETTINGS",
         appSettings: { ...appSettings, ...parsedSettings },
@@ -132,15 +152,27 @@ const HomeNavigator = () => {
     updateConfigData();
   }, []);
 
+  useEffect(() => {
+    setLocale(appSettings?.lng || defaultLng);
+  }, [appSettings.lng]);
+  useEffect(() => {
+    setCurrencyLocale(appSettings.dynamic_currency);
+  }, [appSettings.dynamic_currency]);
+
   // Send push token to server
 
   useEffect(() => {
     if (settingsUpdated && configUpdated) {
       registerForPushNotificationsAsync().then((token) => sendPushToken(token));
+      hideSplash();
     } else {
       return;
     }
   }, [settingsUpdated, configUpdated]);
+
+  const hideSplash = async () => {
+    await SplashScreen.hideAsync();
+  };
 
   const sendPushToken = (pt) => {
     if (user && auth_token) {
@@ -155,7 +187,7 @@ const HomeNavigator = () => {
       });
     }
     api
-      .post("push-notification/register", {
+      .post("push-notification/add-device", {
         push_token: pt,
         events: nCon,
       })
@@ -205,7 +237,6 @@ const HomeNavigator = () => {
         lightColor: "#FF231F7C",
       });
     }
-    console.log(token);
     // alert(token);
     return token;
   };
@@ -250,16 +281,16 @@ const HomeNavigator = () => {
         }}
       >
         <Stack.Screen
-          name={routes.tabNavigator}
-          component={TabNavigator}
+          name={routes.drawerNavigator}
+          component={DrawerNavigator}
           options={{
-            headerShown: false,
+            header: () => null,
           }}
         />
         <Stack.Screen
           name={routes.listingDetailScreen}
           component={ListingDetailScreen}
-          options={{ headerShown: false }}
+          options={{ header: () => null }}
         />
         <Stack.Screen
           name={routes.sendEmailScreen}
@@ -307,12 +338,26 @@ const HomeNavigator = () => {
         <Stack.Screen
           name={routes.loginScreen}
           component={LoginScreen}
-          options={{ title: __("screenTitles.loginScreen", appSettings.lng) }}
+          options={{
+            title: __("screenTitles.loginScreen", appSettings.lng),
+            header: () => null,
+          }}
         />
         <Stack.Screen
           name={routes.signUpScreen}
           component={SignUpScreen}
-          options={{ title: __("screenTitles.signUpScreen", appSettings.lng) }}
+          options={{
+            title: __("screenTitles.signUpScreen", appSettings.lng),
+            header: () => null,
+          }}
+        />
+        <Stack.Screen
+          name={routes.forgotPassScreen}
+          component={ForgotPassScreen}
+          options={{
+            title: __("screenTitles.forgotPassScreen", appSettings.lng),
+            header: () => null,
+          }}
         />
         <Stack.Screen
           name={routes.myListingsScreen}
@@ -340,6 +385,7 @@ const HomeNavigator = () => {
           component={MyProfileScreen}
           options={{
             title: __("screenTitles.myProfileScreen", appSettings.lng),
+            header: () => null,
           }}
         />
         <Stack.Screen
@@ -381,13 +427,6 @@ const HomeNavigator = () => {
           }}
         />
         <Stack.Screen
-          name={routes.thirdPartyLicensesScreen}
-          component={ThirdPartyLicensesScreen}
-          options={{
-            title: __("screenTitles.thirdPartyLicensesScreen", appSettings.lng),
-          }}
-        />
-        <Stack.Screen
           name={routes.tnCScreen}
           component={TnCScreen}
           options={{ title: __("screenTitles.tNCScreen", appSettings.lng) }}
@@ -397,6 +436,7 @@ const HomeNavigator = () => {
           component={EditPersonalDetailScreen}
           options={{
             title: __("screenTitles.editPersonalDetailScreen", appSettings.lng),
+            header: () => null,
           }}
         />
         <Stack.Screen
@@ -409,17 +449,10 @@ const HomeNavigator = () => {
         <Stack.Screen
           name={routes.storeDetailsScreen}
           options={{
-            headerShown: false,
+            header: () => null,
             title: __("screenTitles.storeDetailsScreen", appSettings.lng),
           }}
           component={StoreDetailsScreen}
-        />
-        <Stack.Screen
-          name={routes.storeMoreDetailsScreen}
-          component={StoreMoreDetailsScreen}
-          options={{
-            title: __("screenTitles.storeMoreDetailsScreen", appSettings.lng),
-          }}
         />
         <Stack.Screen
           name={routes.allStoresScreen}
@@ -466,6 +499,20 @@ const HomeNavigator = () => {
             title: __("screenTitles.paymentDetailScreen", appSettings.lng),
           }}
         />
+        <Stack.Screen
+          name={routes.oTPScreen}
+          component={OTPVerificationScreen}
+          options={{
+            title: __("screenTitles.oTPScreen", appSettings.lng),
+          }}
+        />
+        <Stack.Screen
+          name={routes.documentsScreen}
+          component={MyDocumentsScreen}
+          options={{
+            title: __("screenTitles.documentsScreen", appSettings.lng),
+          }}
+        />
       </Stack.Navigator>
     );
   } else {
@@ -473,14 +520,14 @@ const HomeNavigator = () => {
       <View
         style={{
           flex: 1,
-          backgroundColor: "#ffa110",
+          backgroundColor: COLORS.bg_splash,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
         <Image
           source={require("../assets/splash.png")}
-          style={{ height: "100%", width: "100%", resizeMode: "contain" }}
+          style={{ height: "100%", width: "100%", resizeMode: "cover" }}
         />
       </View>
     );

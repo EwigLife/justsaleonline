@@ -14,6 +14,7 @@ import { __ } from "../language/stringPicker";
 import { useStateValue } from "../StateProvider";
 import { COLORS } from "../variables/color";
 import moment from "moment";
+import { useIsFocused } from "@react-navigation/native";
 
 const PaymentDetailScreen = ({ route }) => {
   const [{ auth_token, appSettings, config, ios, rtl_support }] =
@@ -22,6 +23,7 @@ const PaymentDetailScreen = ({ route }) => {
   const [paymentData, setPaymentData] = useState();
   const [errorMessage, setErrorMessage] = useState();
   const [retry, setRetry] = useState(false);
+  const isFocused = useIsFocused();
 
   // Initial Call
   useEffect(() => {
@@ -41,15 +43,17 @@ const PaymentDetailScreen = ({ route }) => {
     api
       .get(`orders/${id}`)
       .then((res) => {
-        if (res.ok) {
-          setPaymentData(res.data);
-        } else {
-          setErrorMessage(
-            res?.data?.error_message ||
-              res?.data?.error ||
-              res?.problem ||
-              __("paymentsScreenTexts.unknownError", appSettings.lng)
-          );
+        if (isFocused) {
+          if (res.ok) {
+            setPaymentData(res.data);
+          } else {
+            setErrorMessage(
+              res?.data?.error_message ||
+                res?.data?.error ||
+                res?.problem ||
+                __("paymentsScreenTexts.unknownError", appSettings.lng)
+            );
+          }
         }
       })
       .then(() => {
@@ -101,15 +105,26 @@ const PaymentDetailScreen = ({ route }) => {
           ) : (
             <ScrollView contentContainerStyle={styles.scrollWrap}>
               <View style={styles.headerWrap}>
-                <Text style={[styles.id, rtlText]}>
-                  {decodeString("&#35;")}
+                <Text style={[styles.id, rtlTextA]}>
+                  {__("paymentDetailScreen.invoiceNo", appSettings.lng)}{" "}
                   {paymentData.id}
                 </Text>
               </View>
 
-              <View style={{ padding: "3%" }}>
+              <View style={{ paddingHorizontal: "3%", paddingBottom: "3%" }}>
                 {!!paymentData && (
-                  <View style={styles.paymentTableWrap}>
+                  <View
+                    style={{
+                      backgroundColor: COLORS.white,
+                      borderBottomLeftRadius: 10,
+                      borderBottomRightRadius: 10,
+                      elevation: 0.5,
+                      shadowColor: COLORS.gray,
+                      shadowOffset: { height: 1, width: 0 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                    }}
+                  >
                     {!!paymentData?.method && (
                       <View style={[styles.paymentTableRow, rtlView]}>
                         <View
@@ -146,6 +161,86 @@ const PaymentDetailScreen = ({ route }) => {
                       </View>
                     )}
 
+                    {!!paymentData?.coupon?.original && (
+                      <View style={[styles.paymentTableRow, rtlView]}>
+                        <View
+                          style={[
+                            styles.paymentTableLabelWrap,
+                            {
+                              alignItems: rtl_support
+                                ? "flex-end"
+                                : "flex-start",
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.paymentTableLabel, rtlText]}>
+                            {__(
+                              "paymentMethodScreen.payment.originalPrice",
+                              appSettings.lng
+                            )}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.paymentTableValueWrap,
+                            {
+                              alignItems: rtl_support
+                                ? "flex-end"
+                                : "flex-start",
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.paymentTableValue, rtlText]}>
+                            {getPrice(config.payment_currency, {
+                              pricing_type: "price",
+                              price_type: "fixed",
+                              price: paymentData.coupon.original,
+                              max_price: 0,
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                    {!!paymentData?.coupon?.discount && (
+                      <View style={[styles.paymentTableRow, rtlView]}>
+                        <View
+                          style={[
+                            styles.paymentTableLabelWrap,
+                            {
+                              alignItems: rtl_support
+                                ? "flex-end"
+                                : "flex-start",
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.paymentTableLabel, rtlText]}>
+                            {__(
+                              "paymentMethodScreen.payment.discount",
+                              appSettings.lng
+                            )}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.paymentTableValueWrap,
+                            {
+                              alignItems: rtl_support
+                                ? "flex-end"
+                                : "flex-start",
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.paymentTableValue, rtlText]}>
+                            {getPrice(config.payment_currency, {
+                              pricing_type: "price",
+                              price_type: "fixed",
+                              price: paymentData.coupon.discount,
+                              max_price: 0,
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
                     {!!paymentData?.price && (
                       <View style={[styles.paymentTableRow, rtlView]}>
                         <View
@@ -179,7 +274,10 @@ const PaymentDetailScreen = ({ route }) => {
                             {getPrice(config.payment_currency, {
                               pricing_type: "price",
                               price_type: "fixed",
-                              price: paymentData.price,
+                              price:
+                                config?.coupon && paymentData?.coupon?.subtotal
+                                  ? paymentData.coupon.subtotal
+                                  : paymentData.price,
                               max_price: 0,
                             })}
                           </Text>
@@ -201,7 +299,7 @@ const PaymentDetailScreen = ({ route }) => {
                           >
                             <Text style={[styles.paymentTableLabel, rtlText]}>
                               {__(
-                                "paymentMethodScreen.payment.date",
+                                "paymentMethodScreen.payment.orderDate",
                                 appSettings.lng
                               )}
                             </Text>
@@ -239,7 +337,7 @@ const PaymentDetailScreen = ({ route }) => {
                         >
                           <Text style={[styles.paymentTableLabel, rtlText]}>
                             {__(
-                              "paymentMethodScreen.payment.date",
+                              "paymentMethodScreen.payment.paymentDate",
                               appSettings.lng
                             )}
                           </Text>
@@ -335,7 +433,19 @@ const PaymentDetailScreen = ({ route }) => {
                     )}
 
                     {!!paymentData?.status && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
+                      <View
+                        style={[
+                          styles.paymentTableRow,
+                          {
+                            borderBottomWidth: !!paymentData?.gateway
+                              ?.instructions
+                              ? 0.7
+                              : 0,
+                          },
+
+                          rtlView,
+                        ]}
+                      >
                         <View
                           style={[
                             styles.paymentTableLabelWrap,
@@ -372,7 +482,13 @@ const PaymentDetailScreen = ({ route }) => {
                     {!!paymentData?.gateway?.instructions &&
                       // paymentData?.method === "offline" &&
                       paymentData?.status !== "Completed" && (
-                        <View style={[styles.paymentTableRow, rtlView]}>
+                        <View
+                          style={[
+                            styles.paymentTableRow,
+                            { borderBottomWidth: 0 },
+                            rtlView,
+                          ]}
+                        >
                           <View
                             style={[
                               styles.paymentTableLabelWrap,
@@ -412,10 +528,9 @@ const PaymentDetailScreen = ({ route }) => {
                   <View style={styles.planTableWrap}>
                     <View
                       style={{
-                        backgroundColor: COLORS.primary,
-                        paddingHorizontal: 10,
+                        backgroundColor: COLORS.bg_primary,
+                        paddingHorizontal: 15,
                         paddingVertical: ios ? 10 : 7,
-                        alignItems: "center",
                         borderTopRightRadius: 10,
                         borderTopLeftRadius: 10,
                         marginTop: 15,
@@ -424,7 +539,8 @@ const PaymentDetailScreen = ({ route }) => {
                       <Text
                         style={[
                           styles.paymentTableValue,
-                          { color: COLORS.white },
+                          { color: COLORS.primary },
+                          rtlTextA,
                         ]}
                       >
                         {__(
@@ -433,176 +549,193 @@ const PaymentDetailScreen = ({ route }) => {
                         )}
                       </Text>
                     </View>
-
-                    {!!paymentData?.plan?.title && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
-                        <View
-                          style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.pricingOption",
-                              appSettings.lng
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {decodeString(paymentData.plan.title)}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                    {!!paymentData?.plan?.description && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
-                        <View
-                          style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.description",
-                              appSettings.lng
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {decodeString(paymentData.plan.description)}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                    {!!paymentData?.plan?.visible && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
-                        <View
-                          style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.duration",
-                              appSettings.lng
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {paymentData.plan.visible}
-                            <Text
-                              style={{
-                                fontSize: 12,
-                                color: COLORS.text_gray,
-                                fontWeight: "normal",
-                              }}
-                            >
-                              {" ("}
+                    <View
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderBottomLeftRadius: 10,
+                        borderBottomRightRadius: 10,
+                        elevation: 0.5,
+                        shadowColor: COLORS.gray,
+                        shadowOffset: { height: 1, width: 0 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
+                      }}
+                    >
+                      {!!paymentData?.plan?.title && (
+                        <View style={[styles.paymentTableRow, rtlView]}>
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
                               {__(
-                                "promoteScreenTexts.validPeriodUnit",
+                                "paymentMethodScreen.plan.pricingOption",
                                 appSettings.lng
                               )}
-                              )
                             </Text>
-                          </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {decodeString(paymentData.plan.title)}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                    )}
-                    {!!paymentData?.plan?.price && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
+                      )}
+                      {!!paymentData?.plan?.description && (
+                        <View style={[styles.paymentTableRow, rtlView]}>
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
+                              {__(
+                                "paymentMethodScreen.plan.description",
+                                appSettings.lng
+                              )}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {decodeString(paymentData.plan.description)}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      {!!paymentData?.plan?.visible && (
+                        <View style={[styles.paymentTableRow, rtlView]}>
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
+                              {__(
+                                "paymentMethodScreen.plan.duration",
+                                appSettings.lng
+                              )}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {paymentData.plan.visible}
+                              <Text
+                                style={{
+                                  fontSize: 12,
+                                  color: COLORS.text_gray,
+                                  fontWeight: "normal",
+                                }}
+                              >
+                                {" ("}
+                                {__(
+                                  "promoteScreenTexts.validPeriodUnit",
+                                  appSettings.lng
+                                )}
+                                )
+                              </Text>
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      {!!paymentData?.plan?.price && (
                         <View
                           style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
+                            styles.paymentTableRow,
+                            { borderBottomWidth: 0 },
+                            rtlView,
                           ]}
                         >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.amount",
-                              appSettings.lng
-                            )}
-                          </Text>
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
+                              {__(
+                                "paymentMethodScreen.plan.amount",
+                                appSettings.lng
+                              )}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {getPrice(config.payment_currency, {
+                                pricing_type: "price",
+                                price_type: "fixed",
+                                price: paymentData.plan.price,
+                                max_price: 0,
+                              })}
+                            </Text>
+                          </View>
                         </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {getPrice(config.payment_currency, {
-                              pricing_type: "price",
-                              price_type: "fixed",
-                              price: paymentData.plan.price,
-                              max_price: 0,
-                            })}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
+                      )}
+                    </View>
                   </View>
                 ) : (
                   <View style={styles.planTableWrap}>
                     {paymentData?.plan && (
                       <View
                         style={{
-                          backgroundColor: COLORS.primary,
+                          backgroundColor: COLORS.bg_primary,
                           paddingHorizontal: 10,
                           paddingVertical: ios ? 10 : 7,
-                          alignItems: "center",
                           borderTopRightRadius: 10,
                           borderTopLeftRadius: 10,
                           marginTop: 15,
@@ -611,7 +744,8 @@ const PaymentDetailScreen = ({ route }) => {
                         <Text
                           style={[
                             styles.paymentTableValue,
-                            { color: COLORS.white },
+                            { color: COLORS.primary },
+                            rtlTextA,
                           ]}
                         >
                           {__(
@@ -621,176 +755,194 @@ const PaymentDetailScreen = ({ route }) => {
                         </Text>
                       </View>
                     )}
-                    {!!paymentData?.plan?.title && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
-                        <View
-                          style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.membershipTitle",
-                              appSettings.lng
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {decodeString(paymentData.plan.title)}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                    {!!paymentData?.plan?.description && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
-                        <View
-                          style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.description",
-                              appSettings.lng
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {decodeString(paymentData.plan.description)}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-                    {!!paymentData?.plan?.price && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
-                        <View
-                          style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.amount",
-                              appSettings.lng
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {getPrice(config.payment_currency, {
-                              pricing_type: "price",
-                              price_type: "fixed",
-                              price: paymentData.plan.price,
-                              max_price: 0,
-                            })}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
-
-                    {!!paymentData?.plan?.visible && (
-                      <View style={[styles.paymentTableRow, rtlView]}>
-                        <View
-                          style={[
-                            styles.paymentTableLabelWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableLabel, rtlText]}>
-                            {__(
-                              "paymentMethodScreen.plan.duration",
-                              appSettings.lng
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentTableValueWrap,
-                            {
-                              alignItems: rtl_support
-                                ? "flex-end"
-                                : "flex-start",
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.paymentTableValue, rtlText]}>
-                            {paymentData.plan.visible}
-                            <Text
-                              style={{
-                                fontSize: 12,
-                                color: COLORS.text_gray,
-                                fontWeight: "normal",
-                              }}
-                            >
-                              {" "}
-                              (
+                    <View
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderBottomLeftRadius: 10,
+                        borderBottomRightRadius: 10,
+                        elevation: 0.5,
+                        shadowColor: COLORS.gray,
+                        shadowOffset: { height: 1, width: 0 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
+                      }}
+                    >
+                      {!!paymentData?.plan?.title && (
+                        <View style={[styles.paymentTableRow, rtlView]}>
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
                               {__(
-                                "promoteScreenTexts.validPeriodUnit",
+                                "paymentMethodScreen.plan.membershipTitle",
                                 appSettings.lng
                               )}
-                              )
                             </Text>
-                          </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {decodeString(paymentData.plan.title)}
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                    )}
+                      )}
+                      {!!paymentData?.plan?.description && (
+                        <View style={[styles.paymentTableRow, rtlView]}>
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
+                              {__(
+                                "paymentMethodScreen.plan.description",
+                                appSettings.lng
+                              )}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {decodeString(paymentData.plan.description)}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      {!!paymentData?.plan?.visible && (
+                        <View style={[styles.paymentTableRow, rtlView]}>
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
+                              {__(
+                                "paymentMethodScreen.plan.duration",
+                                appSettings.lng
+                              )}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {paymentData.plan.visible}
+                              <Text
+                                style={{
+                                  fontSize: 12,
+                                  color: COLORS.text_gray,
+                                  fontWeight: "normal",
+                                }}
+                              >
+                                {" "}
+                                (
+                                {__(
+                                  "promoteScreenTexts.validPeriodUnit",
+                                  appSettings.lng
+                                )}
+                                )
+                              </Text>
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      {!!paymentData?.plan?.price && (
+                        <View
+                          style={[
+                            styles.paymentTableRow,
+                            { borderBottomWidth: 0 },
+                            ,
+                            rtlView,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.paymentTableLabelWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableLabel, rtlText]}>
+                              {__(
+                                "paymentMethodScreen.plan.amount",
+                                appSettings.lng
+                              )}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.paymentTableValueWrap,
+                              {
+                                alignItems: rtl_support
+                                  ? "flex-end"
+                                  : "flex-start",
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.paymentTableValue, rtlText]}>
+                              {getPrice(config.payment_currency, {
+                                pricing_type: "price",
+                                price_type: "fixed",
+                                price: paymentData.plan.price,
+                                max_price: 0,
+                              })}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
 
                     {!!paymentData?.plan?.promotion && (
                       <View style={styles.featuresSectionWrap}>
                         <View
                           style={{
-                            backgroundColor: COLORS.primary,
+                            backgroundColor: COLORS.bg_primary,
                             paddingHorizontal: 10,
                             paddingVertical: ios ? 10 : 7,
-                            alignItems: "center",
                             borderTopRightRadius: 10,
                             borderTopLeftRadius: 10,
                             marginTop: 15,
@@ -799,8 +951,8 @@ const PaymentDetailScreen = ({ route }) => {
                           <Text
                             style={[
                               styles.featuresHeader,
-                              { color: COLORS.white },
-                              rtlText,
+                              { color: COLORS.primary },
+                              rtlTextA,
                             ]}
                           >
                             {__(
@@ -809,7 +961,18 @@ const PaymentDetailScreen = ({ route }) => {
                             )}
                           </Text>
                         </View>
-                        <View style={styles.featuresTableWrap}>
+                        <View
+                          style={{
+                            backgroundColor: COLORS.white,
+                            borderBottomLeftRadius: 10,
+                            borderBottomRightRadius: 10,
+                            elevation: 0.5,
+                            shadowColor: COLORS.gray,
+                            shadowOffset: { height: 1, width: 0 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 2,
+                          }}
+                        >
                           <View style={[styles.featTabHedRow, rtlView]}>
                             <View
                               style={[
@@ -836,7 +999,19 @@ const PaymentDetailScreen = ({ route }) => {
                             </View>
                           </View>
                           {!!paymentData?.plan?.regular_ads && (
-                            <View style={[styles.featTabRow, rtlView]}>
+                            <View
+                              style={[
+                                styles.featTabRow,
+                                {
+                                  borderBottomWidth: !!Object.keys(
+                                    paymentData?.plan?.promotion?.membership
+                                  ).length
+                                    ? 0.7
+                                    : 0,
+                                },
+                                rtlView,
+                              ]}
+                            >
                               <View
                                 style={[
                                   styles.featTabContentLabelWrap,
@@ -871,9 +1046,16 @@ const PaymentDetailScreen = ({ route }) => {
                           ).length &&
                             Object.keys(
                               paymentData?.plan?.promotion?.membership
-                            ).map((_key, index) => (
+                            ).map((_key, index, arr) => (
                               <View
-                                style={[styles.featTabRow, rtlView]}
+                                style={[
+                                  styles.featTabRow,
+                                  {
+                                    borderBottomWidth:
+                                      arr.length - 1 == index ? 0 : 0.7,
+                                  },
+                                  rtlView,
+                                ]}
                                 key={index}
                               >
                                 <View
@@ -889,7 +1071,7 @@ const PaymentDetailScreen = ({ route }) => {
                                   <Text
                                     style={[styles.featTabContent, rtlText]}
                                   >
-                                    {config?.promotions[_key] || _key}
+                                    {__(`promotions.${_key}`, appSettings.lng)}
                                   </Text>
                                 </View>
                                 <View style={styles.featTabContentWrap}>
@@ -933,7 +1115,7 @@ const PaymentDetailScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: "#F8F8F8",
   },
   errorWrap: {
     flex: 1,
@@ -948,7 +1130,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingTop: 20,
   },
-  featTabContent: { fontWeight: "bold", color: COLORS.text_dark },
+  featTabContent: { fontWeight: "bold", color: COLORS.text_gray },
 
   featTabContentLabelWrap: {
     flex: 1.5,
@@ -974,17 +1156,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border_light,
+    marginHorizontal: "3%",
   },
   featTabRow: {
     flexDirection: "row",
     borderBottomWidth: 0.7,
     borderBottomColor: COLORS.border_light,
+    marginHorizontal: "3%",
   },
   headerWrap: {
-    alignItems: "center",
     marginTop: "3%",
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 10,
+    backgroundColor: COLORS.bg_primary,
+    paddingHorizontal: 15,
     paddingVertical: Platform.OS === "ios" ? 10 : 7,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
@@ -993,7 +1176,7 @@ const styles = StyleSheet.create({
   id: {
     fontSize: 16,
     fontWeight: "bold",
-    color: COLORS.white,
+    color: COLORS.primary,
   },
   loadingWrap: {
     flex: 1,
@@ -1015,10 +1198,11 @@ const styles = StyleSheet.create({
 
     borderBottomWidth: 0.7,
     borderBottomColor: COLORS.border_light,
+    marginHorizontal: 10,
   },
   paymentTableValue: {
     fontWeight: "bold",
-    color: COLORS.text_dark,
+    color: COLORS.text_gray,
   },
   paymentTableValueWrap: {
     justifyContent: "center",
