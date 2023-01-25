@@ -3,32 +3,45 @@
     "name": "Just Sale online",
     "slug": "justsaleonline",
     "version": "1.0.20",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "plugins": [
+      "@react-native-google-signin/google-signin",
       [
-        "expo-notifications",
+        "react-native-fbsdk-next",
         {
-          "icon": "./assets/icon.png",
-          "color": "#ffffff",
-          "mode": "production"
+        "appID": "351236990180813",
+        "clientToken": "a2d87c76add22db8d2288086acfe0c93",
+        "displayName": "Just Sale Online",
+        "advertiserIDCollectionEnabled": false,
+        "autoLogAppEventsEnabled": false,
+        "isAutoInitEnabled": true }
+        ],
+      [
+        "expo-document-picker",
+        {
+          "appleTeamId": "M34L8S85ZF",
+          "iCloudContainerEnvironment": "Production"
         }
       ],
       [
-        "expo-facebook",
+        "expo-notifications",
         {
-          "userTrackingPermission": false
+          "icon": "./assets/icon96x96.png",
+          "color": "#ffffff",
+          "mode": "production"
         }
       ]
     ],
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
-      "backgroundColor": "#ffffff",
-      "resizeMode": "contain"
+      "backgroundColor": "#ffa110",
+      "resizeMode": "cover"
     },
     "notification": {
-      "icon": "./assets/icon.png",
-      "color": "#ffffff",
+      "icon": "./assets/icon96x96.png",
+      "color": "#ffa110",
       "iosDisplayInForeground": true,
       "androidMode": "default"
     },
@@ -37,27 +50,27 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
+      "bitcode": "Debug",
       "usesAppleSignIn": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.justsaleonline.com",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
+      "usesIcloudStorage": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to capture and upload user profile image and Listing Image to the server.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to the photo library to select and upload user profile image and Listing Image to the server.",
-        "NSPhotoLibraryAddUsageDescription": "This app needs access to the photo library to select and upload user profile image and Listing Image to the server.",
-        "NSLocationWhenInUseUsageDescription": "This app usages device location on listing information, Listing search Data and User information.",
+        "NSCameraUsageDescription": "Just Sale Online uses the camera to capture and upload user profile image and Listing Image to the server.",
+        "NSPhotoLibraryUsageDescription": "Just Sale Online needs access to the photo library to select and upload user profile image and Listing Image to the server.",
+        "NSPhotoLibraryAddUsageDescription": "Just Sale Online needs access to the photo library to select and upload user profile image and Listing Image to the server.",
+        "NSLocationWhenInUseUsageDescription": "Just Sale Online usages device location on listing information, Listing search Data and User information.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Just Sale Online usages device location on listing information, Listing search Data and User information.",
+        "NSLocationAlwaysUsageDescription": "Just Sale Online uses device location on listing information, Listing search Data and User information.",
+        "NSMicrophoneUsageDescription": "Just Sale Online uses your microphone while taking video of your product for uploading in listing information.",
         "CFBundleAllowMixedLocalizations": true,
         "UIBackgroundModes": ["remote-notification"]
       },
       "config": {
-        "googleSignIn":{
-          "reservedClientId": "com.googleusercontent.apps.845992057495-5ahf6cddnpep4s3tlf7ph9ctrhe6f3bm"
-        },
         "googleMapsApiKey": "AIzaSyCM9loQN_cO8mTuPEZf6hn6HOo0U_XH1Ik"
       }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "android": {
       "package": "com.justsaleonline.com",
@@ -83,13 +96,16 @@
         "LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.INTERNET",
+        "POST_NOTIFICATIONS"
       ],
-      "versionCode": 20
+      "versionCode": 1
     },
-    "facebookScheme": "fb351236990180813",
-    "facebookAppId": "351236990180813",
-    "facebookDisplayName": "Just Sale Online",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "scheme": "justsaleonline"
   }
 }
+

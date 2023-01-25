@@ -1,5 +1,11 @@
 export const miscConfig = {
   enableHomeButtonRefreshAction: true,
+  enableAppSharing: false,
+  appSharingLinks: {
+    android:
+      "https://play.google.com/store/apps/details?id=com.justsaleonline.com",
+    iOS: "",
+  },
   oldHomeScreenLayout: false,
   oldListingCard: false,
   oldBottomTabBar: false,
